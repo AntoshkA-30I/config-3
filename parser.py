@@ -17,15 +17,15 @@ class DataParser:
         for line in lines:
             line = line.strip()
 
-            #--- Комментарий
+        #--- Комментарий
             if '//' in line:
                 line = line.split('//', 1)[0].strip()
 
-            #--- Пустая строка
+        #--- Пустая строка
             if not line:
                 continue
 
-            #--- Объявление словаря
+        #--- Объявление словаря
             if line.endswith('{') or line.endswith('= {'):
                 current_dict = {}
                 name = line[:-1].strip()  # Извлекаем имя словаря
@@ -43,7 +43,7 @@ class DataParser:
 
                     if name.startswith('const '):
                         const_name = name[6:]  # Извлекаем имя константы
-                        #--- Вычисление константы
+        #--- Вычисление константы
                         if value.startswith('$[') and value.endswith(']'):
                             ref_name = value[2:-1]  # Извлекаем имя константы
                             if ref_name in self.constants:
@@ -60,9 +60,9 @@ class DataParser:
                                 raise ValueError(f"Ошибка: значение для {name} не является числом.")
 
                     else:
-                        stack[-1][name] = value
+                        raise ValueError(f"Ошибка: не указан тип для переменной {name}.")
                 else:
-                    raise ValueError(f"Warning: строка не содержит '=', пропускаем: {line}")
+                    raise ValueError(f"Ошибка, строка: {line} ")
 
         return self.data
 
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
     
     # Чтение данных из файла
-    with open(args.config_path, "r") as file:
+    with open(args.config_path, "r", encoding='utf-8') as file:
         lines = file.readlines()
 
     # Парсинг данных
