@@ -1,8 +1,8 @@
 import xml.etree.ElementTree as ET
+from xml.dom import minidom
 
 
-constants = {} # Словарь для хранения констант
-
+# Функция преобразования синтаксиса учебного языка в XML
 def parse_data(lines):
     data = {}
     stack = [data]
@@ -10,15 +10,15 @@ def parse_data(lines):
     for line in lines:
         line = line.strip()
         
-#--- Комментарий
+    #--- Комментарий
         if '//' in line:
             line = line.split('//', 1)[0].strip()
         
-#--- Пустая строка
+    #--- Пустая строка
         if not line:
             continue
         
-#--- Словарь
+    #--- Словарь
         if line.startswith('struct'):
             current_dict = {}
             stack[-1][line.split()[1]] = current_dict  # Имя словаря
@@ -31,7 +31,7 @@ def parse_data(lines):
             if '=' in line:
                 name, value = map(str.strip, line.split('=', 1))
                 
-#--- Объявление константы
+    #--- Объявление константы
                 if name.startswith('const '):
                     try:
                         constants[name[6:]] = int(value.strip())
@@ -39,7 +39,7 @@ def parse_data(lines):
                     except ValueError:
                         print(f"Ошибка: значение для {name} не является числом.")
 
-#--- Вычисление константы
+    #--- Вычисление константы
                 else:
                     if value.startswith('$[') and value.endswith(']'):
                         const_name = value[2:-1]  # Извлекаем имя константы
@@ -63,6 +63,7 @@ def parse_data(lines):
     return data
 
 
+# Функция создания XML-элементов
 def dict_to_xml(data, root):
     for key, value in data.items():
         if isinstance(value, dict):
@@ -73,6 +74,17 @@ def dict_to_xml(data, root):
             sub_element.text = str(value)
 
 
+# Функция форматирования XML
+def format_xml(element):
+    rough_string = ET.tostring(element, 'utf-8')
+    reparsed = minidom.parseString(rough_string)
+    return reparsed.toprettyxml(indent="  ")
+
+
+
+
+constants = {} # Словарь для хранения констант
+
 # Чтение данных из файла
 with open('C:/Users/anton/Desktop/config-3/config.txt', "r") as file:
     lines = file.readlines()
@@ -81,11 +93,9 @@ with open('C:/Users/anton/Desktop/config-3/config.txt', "r") as file:
 data = parse_data(lines)
 
 # Создание корневого элемента
-root = ET.Element("root")
+root = ET.Element('root')
 dict_to_xml(data, root)
 
-# Запись в XML файл
-tree = ET.ElementTree(root)
-xml_string = ET.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
-print(xml_string)
-tree.write('C:/Users/anton/Desktop/config-3/config.xml', encoding='utf-8', xml_declaration=True)
+# Вывод данных
+pretty_xml = format_xml(root)
+print(pretty_xml)
