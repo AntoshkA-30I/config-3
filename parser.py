@@ -17,15 +17,15 @@ class DataParser:
         for line in lines:
             line = line.strip()
 
-        #--- Комментарий
+            #--- Комментарий
             if '//' in line:
                 line = line.split('//', 1)[0].strip()
 
-        #--- Пустая строка
+            #--- Пустая строка
             if not line:
                 continue
 
-        #--- Объявление словаря
+            #--- Объявление словаря
             if line.endswith('{') or line.endswith('= {'):
                 current_dict = {}
                 name = line[:-1].strip()  # Извлекаем имя словаря
@@ -43,7 +43,12 @@ class DataParser:
 
                     if name.startswith('const '):
                         const_name = name[6:]  # Извлекаем имя константы
-        #--- Вычисление константы
+
+                        # Проверка на существование константы
+                        if const_name in self.constants:
+                            raise ValueError(f"Ошибка: Константа {const_name} уже объявлена.")
+
+                        #--- Вычисление константы
                         if value.startswith('$[') and value.endswith(']'):
                             ref_name = value[2:-1]  # Извлекаем имя константы
                             if ref_name in self.constants:
