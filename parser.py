@@ -6,23 +6,26 @@ from xml.dom import minidom
 def parse_data(lines):
     data = {}
     stack = [data]
-    constants = {}  # Инициализация словаря для хранения констант
+    constants = {}  # Словарь для хранения констант
 
     for line in lines:
         line = line.strip()
 
-        #--- Комментарий
+    #--- Комментарий
         if '//' in line:
             line = line.split('//', 1)[0].strip()
 
-        #--- Пустая строка
+    #--- Пустая строка
         if not line:
             continue
 
-        #--- Словарь
-        if line.startswith('struct'):
+    #--- Объявление словаря
+        if line.endswith('{') or line.endswith('= {'):
             current_dict = {}
-            stack[-1][line.split()[1]] = current_dict  # Имя словаря
+            name = line[:-1].strip()  # Извлекаем имя словаря
+            if name.endswith('='):
+                name = name[:-1].strip()  # Убираем '='
+            stack[-1][name] = current_dict  # Добавляем словарь в родительский
             stack.append(current_dict)
 
         elif line == '}':
@@ -32,47 +35,31 @@ def parse_data(lines):
             if '=' in line:
                 name, value = map(str.strip, line.split('=', 1))
 
-                #--- Объявление константы
                 if name.startswith('const '):
+                    const_name = name[6:]  # Извлекаем имя константы
+    #--- Вычисление константы
                     if value.startswith('$[') and value.endswith(']'):
-                        # Обработка случая, когда константа зависит от другой константы
-                        const_name = value[2:-1]  # Извлекаем имя константы
-                        if const_name in constants:
-                            constants[name[6:]] = constants[const_name]  # Присваиваем значение из другой константы
-                            stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
+                        ref_name = value[2:-1]  # Извлекаем имя константы
+                        if ref_name in constants:
+                            constants[const_name] = constants[ref_name]  # Присваиваем значение из другой константы
+                            stack[-1][const_name] = constants[const_name]  # Добавление константы в stack
                         else:
-                            print(f"Ошибка: Константа {const_name} не найдена")
+                            print(f"Ошибка: Константа {ref_name} не найдена")
                             continue  # Пропускаем добавление в словарь
+    #--- Обьявление константы
                     else:
                         try:
-                            constants[name[6:]] = int(value.strip())
-                            stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
+                            constants[const_name] = int(value.strip())
+                            stack[-1][const_name] = constants[const_name]  # Добавление константы в stack
                         except ValueError:
                             print(f"Ошибка: значение для {name} не является числом.")
-                
-                else:
-                    #--- Вычисление константы
-                    if value.startswith('$[') and value.endswith(']'):
-                        const_name = value[2:-1]  # Извлекаем имя константы
-                        if const_name in constants:
-                            value = constants[const_name]
-                        else:
-                            print(f"Ошибка: Константа {const_name} не найдена")
-                            continue  # Пропускаем добавление в словарь
-                    else:
-                        try:
-                            value = int(value.strip())
-                        except ValueError:
-                            print(f"Ошибка: значение для {name} не является числом.")
-                            continue  # Пропускаем добавление в словарь
 
+                else:
                     stack[-1][name] = value
-            
             else:
                 print(f"Warning: строка не содержит '=', пропускаем: {line}")
 
     return data
-
 
 
 # Функция создания XML-элементов
@@ -95,7 +82,6 @@ def format_xml(element):
 
 
 
-constants = {} # Словарь для хранения констант
 
 # Чтение данных из файла
 with open('C:/Users/anton/Desktop/config-3/config.txt', "r") as file:
