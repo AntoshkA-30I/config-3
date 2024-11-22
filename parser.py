@@ -6,19 +6,20 @@ from xml.dom import minidom
 def parse_data(lines):
     data = {}
     stack = [data]
-    
+    constants = {}  # Инициализация словаря для хранения констант
+
     for line in lines:
         line = line.strip()
-        
-    #--- Комментарий
+
+        #--- Комментарий
         if '//' in line:
             line = line.split('//', 1)[0].strip()
-        
-    #--- Пустая строка
+
+        #--- Пустая строка
         if not line:
             continue
-        
-    #--- Словарь
+
+        #--- Словарь
         if line.startswith('struct'):
             current_dict = {}
             stack[-1][line.split()[1]] = current_dict  # Имя словаря
@@ -30,17 +31,27 @@ def parse_data(lines):
         else:
             if '=' in line:
                 name, value = map(str.strip, line.split('=', 1))
-                
-    #--- Объявление константы
-                if name.startswith('const '):
-                    try:
-                        constants[name[6:]] = int(value.strip())
-                        stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
-                    except ValueError:
-                        print(f"Ошибка: значение для {name} не является числом.")
 
-    #--- Вычисление константы
+                #--- Объявление константы
+                if name.startswith('const '):
+                    if value.startswith('$[') and value.endswith(']'):
+                        # Обработка случая, когда константа зависит от другой константы
+                        const_name = value[2:-1]  # Извлекаем имя константы
+                        if const_name in constants:
+                            constants[name[6:]] = constants[const_name]  # Присваиваем значение из другой константы
+                            stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
+                        else:
+                            print(f"Ошибка: Константа {const_name} не найдена")
+                            continue  # Пропускаем добавление в словарь
+                    else:
+                        try:
+                            constants[name[6:]] = int(value.strip())
+                            stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
+                        except ValueError:
+                            print(f"Ошибка: значение для {name} не является числом.")
+                
                 else:
+                    #--- Вычисление константы
                     if value.startswith('$[') and value.endswith(']'):
                         const_name = value[2:-1]  # Извлекаем имя константы
                         if const_name in constants:
@@ -54,13 +65,14 @@ def parse_data(lines):
                         except ValueError:
                             print(f"Ошибка: значение для {name} не является числом.")
                             continue  # Пропускаем добавление в словарь
-                    
+
                     stack[-1][name] = value
             
             else:
                 print(f"Warning: строка не содержит '=', пропускаем: {line}")
-    
+
     return data
+
 
 
 # Функция создания XML-элементов
