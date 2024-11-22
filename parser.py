@@ -1,6 +1,8 @@
 import xml.etree.ElementTree as ET
 
 
+constants = {} # Словарь для хранения констант
+
 def parse_data(lines):
     data = {}
     stack = [data]
@@ -8,33 +10,56 @@ def parse_data(lines):
     for line in lines:
         line = line.strip()
         
-        # Удаляем комментарии, если они есть в конце строки
+#--- Комментарий
         if '//' in line:
             line = line.split('//', 1)[0].strip()
         
-        # Игнорируем пустые строки
+#--- Пустая строка
         if not line:
             continue
         
+#--- Словарь
         if line.startswith('struct'):
             current_dict = {}
-            stack[-1][line.split()[1]] = current_dict  # Имя структуры
+            stack[-1][line.split()[1]] = current_dict  # Имя словаря
             stack.append(current_dict)
+
         elif line == '}':
             stack.pop()
+
         else:
-            # Проверяем, есть ли символ '=' в строке
             if '=' in line:
-                key, value = map(str.strip, line.split('=', 1))
-                if 'struct' in value:  # Если значение - это структура
-                    value = {}
+                name, value = map(str.strip, line.split('=', 1))
+                
+#--- Объявление константы
+                if name.startswith('const '):
+                    try:
+                        constants[name[6:]] = int(value.strip())
+                        stack[-1][name[6:]] = constants[name[6:]]  # Добавление константы в stack
+                    except ValueError:
+                        print(f"Ошибка: значение для {name} не является числом.")
+
+#--- Вычисление константы
                 else:
-                    value = value.strip().strip('"')  # Убираем кавычки
-                stack[-1][key] = value
+                    if value.startswith('$[') and value.endswith(']'):
+                        const_name = value[2:-1]  # Извлекаем имя константы
+                        if const_name in constants:
+                            value = constants[const_name]
+                        else:
+                            print(f"Ошибка: Константа {const_name} не найдена")
+                            continue  # Пропускаем добавление в словарь
+                    else:
+                        try:
+                            value = int(value.strip())
+                        except ValueError:
+                            print(f"Ошибка: значение для {name} не является числом.")
+                            continue  # Пропускаем добавление в словарь
+                    
+                    stack[-1][name] = value
+            
             else:
                 print(f"Warning: строка не содержит '=', пропускаем: {line}")
     
-    print(data)
     return data
 
 
@@ -46,6 +71,7 @@ def dict_to_xml(data, root):
         else:
             sub_element = ET.SubElement(root, key)
             sub_element.text = str(value)
+
 
 # Чтение данных из файла
 with open('C:/Users/anton/Desktop/config-3/config.txt', "r") as file:
@@ -60,6 +86,6 @@ dict_to_xml(data, root)
 
 # Запись в XML файл
 tree = ET.ElementTree(root)
-    #xml_string = ET.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
-    #print(xml_string)
+xml_string = ET.tostring(root, encoding='utf-8', xml_declaration=True).decode('utf-8')
+print(xml_string)
 tree.write('C:/Users/anton/Desktop/config-3/config.xml', encoding='utf-8', xml_declaration=True)
