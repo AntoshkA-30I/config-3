@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import argparse
+import sys
 
 
 class DataParser:
@@ -9,22 +10,22 @@ class DataParser:
         self.data = {}  # Словарь для хранения имен и значений
         self.constants = {}  # Словарь для хранения констант
 
-    # Функция преобразования синтаксиса учебного языка в XML
+    # Функция преобразования синтаксиса учебного языка в словарь
     def parse_data(self, lines):
         stack = [self.data]
 
         for line in lines:
             line = line.strip()
 
-        #--- Комментарий
+            #--- Комментарий
             if '//' in line:
                 line = line.split('//', 1)[0].strip()
 
-        #--- Пустая строка
+            #--- Пустая строка
             if not line:
                 continue
 
-        #--- Объявление словаря
+            #--- Объявление словаря
             if line.endswith('{') or line.endswith('= {'):
                 current_dict = {}
                 name = line[:-1].strip()  # Извлекаем имя словаря
@@ -42,29 +43,29 @@ class DataParser:
 
                     if name.startswith('const '):
                         const_name = name[6:]  # Извлекаем имя константы
-        #--- Вычисление константы
+                        #--- Вычисление константы
                         if value.startswith('$[') and value.endswith(']'):
                             ref_name = value[2:-1]  # Извлекаем имя константы
                             if ref_name in self.constants:
                                 self.constants[const_name] = self.constants[ref_name]  # Присваиваем значение из другой константы
                                 stack[-1][const_name] = self.constants[const_name]  # Добавление константы в stack
                             else:
-                                print(f"Ошибка: Константа {ref_name} не найдена")
-                                continue  # Пропускаем добавление в словарь
-        #--- Объявление константы
+                                raise ValueError(f"Ошибка: Константа {ref_name} не найдена")
+                        #--- Объявление константы
                         else:
                             try:
                                 self.constants[const_name] = int(value.strip())
                                 stack[-1][const_name] = self.constants[const_name]  # Добавление константы в stack
                             except ValueError:
-                                print(f"Ошибка: значение для {name} не является числом.")
+                                raise ValueError(f"Ошибка: значение для {name} не является числом.")
 
                     else:
                         stack[-1][name] = value
                 else:
-                    print(f"Warning: строка не содержит '=', пропускаем: {line}")
+                    raise ValueError(f"Warning: строка не содержит '=', пропускаем: {line}")
 
         return self.data
+
 
     # Функция создания XML-элементов
     def dict_to_xml(self, data, root):
@@ -92,12 +93,15 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
     
     # Чтение данных из файла
-    #file_path = 'C:/Users/anton/Desktop/config-3/config.txt'
     with open(args.config_path, "r") as file:
         lines = file.readlines()
 
     # Парсинг данных
-    data = parser.parse_data(lines)
+    try:
+        data = parser.parse_data(lines)
+    except Exception as e:
+        print(e)
+        sys.exit()
 
     # Создание корневого элемента
     root = ET.Element('root')
