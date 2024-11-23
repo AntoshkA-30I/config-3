@@ -71,8 +71,8 @@ assert output == 'Ошибка: значение для const max_users не я�
 output = test(error_test5)
 assert output == 'Ошибка, строка: application '
 output = test(error_test6)
-assert output == 'Константа min_users не найдена '
+assert output == 'Ошибка: Константа min_users не найдена'
 output = test(error_test7)
-assert output == 'Константа max_users уже объявлена. '
+assert output == 'Ошибка: Константа max_users уже объявлена.'
 
 print('OK')
