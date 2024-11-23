@@ -1,0 +1,13 @@
+// Конфигурация веб-сервера
+const port = 8080
+const max_connections = 100
+
+server {
+    const server_port = $[port]
+    const connections = $[max_connections]
+    routes = {
+        const home = 1     // индекс для главной страницы
+        const about = 2    // индекс для страницы "О нас"
+        const contact = 3   // индекс для страницы "Контакты"
+    }
+}
