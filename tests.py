@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 
 
 def test(input):
+    test_parser.constants = {} # Очищаем словарь констант
     try:
         data = test_parser.parse_data(input)
     except Exception as e:
@@ -29,22 +30,27 @@ error_test5 = ['application ',
     '    const version = 1',
     '}']
 
+error_test6 = ['const max_users = 100',
+               'const users = $[min_users]']
+
+error_test7 = ['const max_users = 100',
+               'const max_users = 150']
+
 test1 = ['application {',
     '    const max_users = 10',
     '    const version = 1',
     '}']
 
 test2 = [
-'// Конфигурация приложения',
-'const max_users = 1000',
-''
-'application {',
-'    const max_users = $[max_users]',
-'    features = {',
-'        const logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)',
-'    }',
-'}',
-]
+    '// Конфигурация приложения',
+    'const max_users = 1000',
+    ''
+    'application {',
+    '    const users = $[max_users]',
+    '    features = {',
+    '        const logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)',
+    '    }',
+    '}']
 #--------tests input--------#
 
 
@@ -53,9 +59,7 @@ test_parser = parser.DataParser()
 output = test(test1)
 assert output == b'<root><application><max_users>10</max_users><version>1</version></application></root>'
 output = test(test2)
-assert output == b'<root><application><max_users>1000</max_users><features><logging_level>2</logging_level></features></application><max_users>1000</max_users></root>'
-output = test(test1)
-assert output == b'<root><application><max_users>10</max_users><version>1</version></application><max_users>1000</max_users></root>'
+assert output == b'<root><application><users>1000</users><features><logging_level>2</logging_level></features></application><max_users>1000</max_users></root>'
 output = test(error_test1)
 assert output == 'Ошибка, строка: / Конфигурация приложения '
 output = test(error_test2)
@@ -66,5 +70,9 @@ output = test(error_test4)
 assert output == 'Ошибка: значение для const max_users не является числом.'
 output = test(error_test5)
 assert output == 'Ошибка, строка: application '
+output = test(error_test6)
+assert output == 'Константа min_users не найдена '
+output = test(error_test7)
+assert output == 'Константа max_users уже объявлена. '
 
 print('OK')
