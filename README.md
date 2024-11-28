@@ -52,15 +52,17 @@ $[имя]
 ### Конфигурация веб-сервера
 **Входные данные:**
 ```
-*> Configuring the database
-def max_conn = 100
-def timeout = 30
-database {
-    database = struct {
-        host = 19216801,
-        port = 5432,
-        max_connections = [max_conn],
-        connection_timeout = [timeout]
+// Конфигурация веб-сервера
+const port = 8080
+const max_connections = 100
+
+struct server {
+    server_port = $[port]
+    connections = $[max_connections]
+    struct routes = {
+        home = 1     // индекс для главной страницы
+        about = 2    // индекс для страницы "О нас"
+        contact = 3   // индекс для страницы "Контакты"
     }
 }
 ```
@@ -89,11 +91,11 @@ database {
 const db_port = 5432
 const max_connections = 50
 
-database {
-    const port = $[db_port]
-    const connections = $[max_connections]
-    const timeout = 30 // время ожидания в секундах
-    const retries = 3    // количество попыток подключения
+struct database {
+    port = $[db_port]
+    connections = $[max_connections]
+    timeout = 30 // время ожидания в секундах
+    retries = 3    // количество попыток подключения
 }
 ```
 **Выходные данные (XML):**
@@ -118,12 +120,12 @@ database {
 const max_users = 1000
 const version_number = 1 // версия приложения
 
-application {
-    const users = $[max_users]
-    const version = $[version_number]
-    features = {
-        const logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)
-        const maintenance_mode = 0 // 0 - отключен, 1 - включен
+struct application {
+    users = $[max_users]
+    version = $[version_number]
+    struct features = {
+        logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)
+        maintenance_mode = 0 // 0 - отключен, 1 - включен
     }
 }
 ```
@@ -146,4 +148,4 @@ application {
 
 ## Результаты тестирования
 В процессе тестирования были созданы как обычные тесты, так и тесты на проверку ошибок. Все тесты прошли успешно, что подтверждает корректность работы инструмента и его устойчивость к различным сценариям использования. <br />
-![](https://github.com/AntoshkA-30I/config-3/blob/main/images/test.png)
+![](https://github.com/AntoshkA-30I/config-3/blob/main/images/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202024-11-29%20014408.png)
