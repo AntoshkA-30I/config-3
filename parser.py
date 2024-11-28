@@ -2,6 +2,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import argparse
 import sys
+import re
 
 
 class DataParser:
@@ -17,18 +18,18 @@ class DataParser:
         for line in lines:
             line = line.strip()
 
-            #--- Комментарий
+        #--- Комментарий
             if '//' in line:
                 line = line.split('//', 1)[0].strip()
 
-            #--- Пустая строка
+        #--- Пустая строка
             if not line:
                 continue
 
-            #--- Объявление словаря
-            if line.endswith('{') or line.endswith('= {'):
+        #--- Объявление словаря
+            if line.startswith('struct ') and (line.endswith('{') or line.endswith('= {')):
                 current_dict = {}
-                name = line[:-1].strip()  # Извлекаем имя словаря
+                name = line[7:-1].strip()  # Извлекаем имя словаря, начиная с 8-го символа
                 if name.endswith('='):
                     name = name[:-1].strip()  # Убираем '='
                 stack[-1][name] = current_dict  # Добавляем словарь в родительский
@@ -42,30 +43,29 @@ class DataParser:
                     name, value = map(str.strip, line.split('=', 1))
 
                     if name.startswith('const '):
-                        const_name = name[6:]  # Извлекаем имя константы
+                        name = name[6:]  # Извлекаем имя 
+                    if not re.match(r'^[a-z_]+$', name):
+                        raise ValueError(f"Ошибка: имя константы {name} содержит недопустимые символы.")
 
-                        # Проверка на существование константы
-                        if const_name in self.constants:
-                            raise ValueError(f"Ошибка: Константа {const_name} уже объявлена.")
-
-                        #--- Вычисление константы
-                        if value.startswith('$[') and value.endswith(']'):
-                            ref_name = value[2:-1]  # Извлекаем имя константы
-                            if ref_name in self.constants:
-                                self.constants[const_name] = self.constants[ref_name]  # Присваиваем значение из другой константы
-                                stack[-1][const_name] = self.constants[const_name]  # Добавление константы в stack
-                            else:
-                                raise ValueError(f"Ошибка: Константа {ref_name} не найдена")
-                        #--- Объявление константы
+        #--- Вычисление константы
+                    if value.startswith('$[') and value.endswith(']'):
+                        ref_name = value[2:-1]  # Извлекаем имя константы
+                        if ref_name in self.constants:
+                            self.constants[name] = self.constants[ref_name]  # Присваиваем значение из другой константы
+                            stack[-1][name] = self.constants[name]  # Добавление константы в stack
                         else:
-                            try:
-                                self.constants[const_name] = int(value.strip())
-                                stack[-1][const_name] = self.constants[const_name]  # Добавление константы в stack
-                            except ValueError:
-                                raise ValueError(f"Ошибка: значение для {name} не является числом.")
-
+                            raise ValueError(f"Ошибка: Константа {ref_name} не найдена")
+        #--- Объявление константы
                     else:
-                        raise ValueError(f"Ошибка: не указан тип для переменной {name}.")
+                            # Проверка на существование константы
+                        if name in self.constants:
+                            raise ValueError(f"Ошибка: Константа {name} уже объявлена.")
+                        try:
+                            self.constants[name] = int(value.strip())
+                            stack[-1][name] = self.constants[name]  # Добавление константы в stack
+                        except ValueError:
+                            raise ValueError(f"Ошибка: значение для {name} не является числом.")
+
                 else:
                     raise ValueError(f"Ошибка, строка: {line} ")
 
@@ -81,6 +81,7 @@ class DataParser:
             else:
                 sub_element = ET.SubElement(root, key)
                 sub_element.text = str(value)
+
 
     # Функция форматирования XML
     def format_xml(self, element):
