@@ -1,78 +1,60 @@
+import unittest
 import parser
 import xml.etree.ElementTree as ET
 
+class TestDataParser(unittest.TestCase):
+    def setUp(self):
+        self.test_parser = parser.DataParser()
 
-def test(input):
-    test_parser.constants = {} # Очищаем словарь констант
-    try:
-        data = test_parser.parse_data(input)
-    except Exception as e:
-        output = e
-        return str(output)
-    
-    root = ET.Element('root')
-    test_parser.dict_to_xml(data, root)
-    output = ET.tostring(root, 'utf-8')
-    return output
+    def test_successful_parsing(self):
+        test1 = ['struct application {',
+                 '    max_users = 10',
+                 '    version = 1',
+                 '}']
+        output = self.run_test(test1)
+        expected_output = b'<root><application><max_users>10</max_users><version>1</version></application></root>'
+        self.assertEqual(output, expected_output)
 
+        test2 = [
+            '// Конфигурация приложения',
+            'const max_users = 1000',
+            '',
+            'struct application {',
+            '    users = $[max_users]',
+            '    struct features = {',
+            '        logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)',
+            '    }',
+            '}']
+        output = self.run_test(test2)
+        expected_output = b'<root><application><users>1000</users><features><logging_level>2</logging_level></features></application><max_users>1000</max_users></root>'
+        self.assertEqual(output, expected_output)
 
-#--------tests input--------#
-error_test1 = ['/ Конфигурация приложения']
+    def test_error_handling(self):
+        error_tests = [
+            (['/ Конфигурация приложения'], 'Ошибка, строка: / Конфигурация приложения '),
+            (['const max_users  1000'], 'Ошибка, строка: const max_users  1000 '),
+            (['cost max_users = 1000'], 'Ошибка: имя константы cost max_users содержит недопустимые символы.'),
+            (['const max_users = qwerty'], 'Ошибка: значение для max_users не является числом.'),
+            (['struct application ', '    const max_users = 10', '    const version = 1', '}'], 'Ошибка, строка: struct application '),
+            (['const max_users = 100', 'const users = $[min_users]'], 'Ошибка: Константа min_users не найдена'),
+            (['const max_users = 100', 'const max_users = 150'], 'Ошибка: Константа max_users уже объявлена.')
+        ]
 
-error_test2 = ['const max_users  1000']
+        for input_data, expected_output in error_tests:
+            output = self.run_test(input_data)
+            self.assertEqual(output, expected_output)
 
-error_test3 = ['cost max_users = 1000']
+    def run_test(self, input):
+        self.test_parser.constants = {}  # Очищаем словарь констант
+        try:
+            data = self.test_parser.parse_data(input)
+        except Exception as e:
+            return str(e)
 
-error_test4 = ['const max_users = qwerty']
+        root = ET.Element('root')
+        self.test_parser.dict_to_xml(data, root)
+        output = ET.tostring(root, 'utf-8')
+        return output
 
-error_test5 = ['application ',
-    '    const max_users = 10',
-    '    const version = 1',
-    '}']
-
-error_test6 = ['const max_users = 100',
-               'const users = $[min_users]']
-
-error_test7 = ['const max_users = 100',
-               'const max_users = 150']
-
-test1 = ['application {',
-    '    const max_users = 10',
-    '    const version = 1',
-    '}']
-
-test2 = [
-    '// Конфигурация приложения',
-    'const max_users = 1000',
-    ''
-    'application {',
-    '    const users = $[max_users]',
-    '    features = {',
-    '        const logging_level = 2 // уровень логирования (1 - низкий, 2 - средний, 3 - высокий)',
-    '    }',
-    '}']
-#--------tests input--------#
-
-
-test_parser = parser.DataParser()
-
-output = test(test1)
-assert output == b'<root><application><max_users>10</max_users><version>1</version></application></root>'
-output = test(test2)
-assert output == b'<root><application><users>1000</users><features><logging_level>2</logging_level></features></application><max_users>1000</max_users></root>'
-output = test(error_test1)
-assert output == 'Ошибка, строка: / Конфигурация приложения '
-output = test(error_test2)
-assert output == 'Ошибка, строка: const max_users  1000 '
-output = test(error_test3)
-assert output == 'Ошибка: не указан тип для переменной cost max_users.'
-output = test(error_test4)
-assert output == 'Ошибка: значение для const max_users не является числом.'
-output = test(error_test5)
-assert output == 'Ошибка, строка: application '
-output = test(error_test6)
-assert output == 'Ошибка: Константа min_users не найдена'
-output = test(error_test7)
-assert output == 'Ошибка: Константа max_users уже объявлена.'
-
-print('OK')
+if __name__ == '__main__':
+    unittest.main()
